@@ -1,6 +1,6 @@
 streamlit
 ultralytics
-opencv
+opencv-python
 numpy
 PIL
 tempfile
