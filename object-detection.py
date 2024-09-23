@@ -1,61 +1,64 @@
 import streamlit as st
-from ultralytics import YOLO
-import torch
-from PIL import Image
 import tempfile
 import numpy as np
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+from ultralytics import YOLO
+import cv2
+from PIL import Image
+import moviepy.editor as mp
 import av
-import imageio
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 
-# Load YOLOv8 model (ensure you have the pre-trained weights)
-model = YOLO("yolov8n.pt")
+# Load YOLOv8 model
+model = YOLO('yolov8n.pt')
 
-st.title("YOLOv8 Object Detection")
-
-# Function to perform object detection on images (using PyTorch instead of OpenCV)
+# Helper function to perform object detection on an image
 def detect_image(image):
     results = model(image)
-    annotated_frame = results[0].plot()  # This returns a NumPy array with the annotated image
-    return annotated_frame
+    return results[0].plot()  # Annotated image with bounding boxes
 
-# Allow users to upload an image or video
-upload_option = st.selectbox("Choose input type", ("Image", "Video", "Webcam"))
+# Title of the Streamlit App
+st.title("YOLOv8 Object Detection")
 
-# Image input
+# Upload options: Image, Video, or Webcam
+upload_option = st.selectbox("Choose Input Type", ("Image", "Video", "Webcam"))
+
+# Image Upload
 if upload_option == "Image":
-    uploaded_image = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+    uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
     if uploaded_image:
-        image = Image.open(uploaded_image)
-        image = np.array(image)
-        st.image(image, caption="Uploaded Image", use_column_width=True)
-
-        result_image = detect_image(image)
+        img = Image.open(uploaded_image)
+        img_array = np.array(img)
+        
+        # Perform object detection
+        result_image = detect_image(img_array)
+        
+        # Display the result
         st.image(result_image, caption="Detected Image", use_column_width=True)
 
-# Video input
+# Video Upload using moviepy
 elif upload_option == "Video":
     uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
     if uploaded_video:
+        # Save the uploaded video to a temporary file
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
-
-        # Use imageio for video processing
-        cap = imageio.get_reader(tfile.name, 'ffmpeg')
+        
+        # Load the video using moviepy
+        video = mp.VideoFileClip(tfile.name)
         stframe = st.empty()
-
-        for frame in cap:
-            frame = np.array(frame)
+        
+        # Loop through video frames and perform object detection
+        for frame in video.iter_frames():
             result_frame = detect_image(frame)
-            stframe.image(result_frame, channels="BGR")
+            stframe.image(result_frame, channels="RGB")
 
-# Webcam input
+# Webcam live detection using streamlit-webrtc
 elif upload_option == "Webcam":
+
     class VideoTransformer(VideoTransformerBase):
         def transform(self, frame):
-            image = frame.to_ndarray(format="bgr24")
-            result_frame = detect_image(image)
-            return result_frame
+            img = frame.to_ndarray(format="bgr24")
+            result_img = detect_image(img)
+            return result_img
 
-    webrtc_streamer(key="webcam", video_transformer_factory=VideoTransformer)
-
+    webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
