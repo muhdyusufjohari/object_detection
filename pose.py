@@ -48,7 +48,7 @@ elif input_option == "Video":
 
 elif input_option == "Webcam":
     if st.button("Start Webcam"):
-        process_video(1)  # 0 is the default camera index
+        process_video(0)  # 0 is the default camera index
 
 st.sidebar.markdown("---")
 st.sidebar.write("Powered by YOLOv8 and Streamlit")
