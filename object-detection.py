@@ -1,24 +1,26 @@
 import streamlit as st
 from ultralytics import YOLO
+import torch
+from PIL import Image
 import tempfile
 import numpy as np
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 import av
-from PIL import Image  # Instead of using cv2 for image handling
+import imageio
 
-# Load YOLOv8 model
+# Load YOLOv8 model (ensure you have the pre-trained weights)
 model = YOLO("yolov8n.pt")
 
 st.title("YOLOv8 Object Detection")
 
-# Allow users to upload an image or video
-upload_option = st.selectbox("Choose input type", ("Image", "Video", "Webcam"))
-
-# Function to perform object detection on images
+# Function to perform object detection on images (using PyTorch instead of OpenCV)
 def detect_image(image):
     results = model(image)
-    annotated_frame = results[0].plot()
+    annotated_frame = results[0].plot()  # This returns a NumPy array with the annotated image
     return annotated_frame
+
+# Allow users to upload an image or video
+upload_option = st.selectbox("Choose input type", ("Image", "Video", "Webcam"))
 
 # Image input
 if upload_option == "Image":
@@ -38,9 +40,7 @@ elif upload_option == "Video":
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
 
-        # Use alternative video reading methods without cv2.VideoCapture
-        import imageio
-
+        # Use imageio for video processing
         cap = imageio.get_reader(tfile.name, 'ffmpeg')
         stframe = st.empty()
 
@@ -58,3 +58,4 @@ elif upload_option == "Webcam":
             return result_frame
 
     webrtc_streamer(key="webcam", video_transformer_factory=VideoTransformer)
+
