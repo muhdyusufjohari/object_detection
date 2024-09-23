@@ -1,6 +1,9 @@
-ultralytics 
-streamlit 
-streamlit-webrtc 
+streamlit
+ultralytics
+streamlit-webrtc
 opencv-python-headless
 imageio[ffmpeg]
+torch
 Pillow
+moviepy
+av
