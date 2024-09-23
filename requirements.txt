@@ -1,9 +1,10 @@
 streamlit
 ultralytics
-streamlit-webrtc
 opencv-python-headless
 imageio[ffmpeg]
 torch
 Pillow
 moviepy
 av
+streamlit-webrtc==0.45.0
+aioice==0.7.6
