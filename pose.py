@@ -1,55 +1,62 @@
 import streamlit as st
 from ultralytics import YOLO
 import cv2
-import numpy as np
-from PIL import Image
 import tempfile
+import numpy as np
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import av
 
-# Load the YOLOv8n-pose model
-model = YOLO('yolov8n-pose.pt')
+# Load YOLOv8 model
+model = YOLO("yolov8n.pt")  # Using a pre-trained YOLOv8 model
 
-def process_image(image):
+st.title("YOLOv8 Object Detection")
+
+# Allow users to upload an image or video
+upload_option = st.selectbox("Choose input type", ("Image", "Video", "Webcam"))
+
+# Function to perform object detection on images
+def detect_image(image):
     results = model(image)
-    return results[0].plot()
+    annotated_frame = results[0].plot()
+    return annotated_frame
 
-def process_video(video):
-    cap = cv2.VideoCapture(video)
-    stframe = st.empty()
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        results = model(frame)
-        output = results[0].plot()
-        stframe.image(output, channels="BGR")
-    cap.release()
-
-st.title("YOLOv8n Pose Detection")
-
-# Sidebar for input selection
-input_option = st.sidebar.radio("Select input type:", ["Image", "Video", "Webcam"])
-
-if input_option == "Image":
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
+# Image input
+if upload_option == "Image":
+    uploaded_image = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+    if uploaded_image:
+        image = np.array(bytearray(uploaded_image.read()), dtype=np.uint8)
+        image = cv2.imdecode(image, 1)
         st.image(image, caption="Uploaded Image", use_column_width=True)
-        if st.button("Detect Poses"):
-            result_image = process_image(image)
-            st.image(result_image, caption="Pose Detection Result", use_column_width=True)
+        
+        result_image = detect_image(image)
+        st.image(result_image, caption="Detected Image", use_column_width=True)
 
-elif input_option == "Video":
-    uploaded_file = st.file_uploader("Choose a video...", type=["mp4", "avi", "mov"])
-    if uploaded_file is not None:
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_file.read())
-        if st.button("Detect Poses"):
-            process_video(tfile.name)
+# Video input
+elif upload_option == "Video":
+    uploaded_video = st.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
+    if uploaded_video:
+        tfile = tempfile.NamedTemporaryFile(delete=False) 
+        tfile.write(uploaded_video.read())
 
-elif input_option == "Webcam":
-    if st.button("Start Webcam"):
-        process_video(0)  # 0 is the default camera index
+        # Read video frames
+        cap = cv2.VideoCapture(tfile.name)
+        stframe = st.empty()
 
-st.sidebar.markdown("---")
-st.sidebar.write("Powered by YOLOv8 and Streamlit")
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            result_frame = detect_image(frame)
+            stframe.image(result_frame, channels="BGR")
+        cap.release()
+
+# Webcam input
+elif upload_option == "Webcam":
+    class VideoTransformer(VideoTransformerBase):
+        def transform(self, frame):
+            image = frame.to_ndarray(format="bgr24")
+            result_frame = detect_image(image)
+            return result_frame
+
+    webrtc_streamer(key="webcam", video_transformer_factory=VideoTransformer)
 
