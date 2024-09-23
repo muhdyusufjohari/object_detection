@@ -1,0 +1,6 @@
+streamlit
+ultralytics
+cv2
+numpy
+PIL
+tempfile
