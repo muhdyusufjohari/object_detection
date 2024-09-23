@@ -2,3 +2,5 @@ ultralytics
 streamlit 
 streamlit-webrtc 
 opencv-python-headless
+imageio
+Pillow
