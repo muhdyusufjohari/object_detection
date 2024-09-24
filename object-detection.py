@@ -6,7 +6,7 @@ import cv2
 from PIL import Image
 import moviepy.editor as mp
 import av
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode, RTCConfiguration
 
 # Load YOLOv8 model
 model = YOLO('yolov8n.pt')
@@ -18,6 +18,13 @@ def detect_image(image):
 
 # Title of the Streamlit App
 st.title("YOLOv8 Object Detection")
+
+# STUN server configuration
+RTC_CONFIGURATION = RTCConfiguration({
+    "iceServers": [
+        {"urls": ["stun:stun.l.google.com:19302"]}  # Google's free STUN server
+    ]
+})
 
 # Upload options: Image, Video, or Webcam
 upload_option = st.selectbox("Choose Input Type", ("Image", "Video", "Webcam"))
@@ -61,4 +68,10 @@ elif upload_option == "Webcam":
             result_img = detect_image(img)
             return result_img
 
-    webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
+    webrtc_streamer(
+        key="example",
+        video_transformer_factory=VideoTransformer,
+        rtc_configuration=RTC_CONFIGURATION,  # Add STUN server configuration
+        media_stream_constraints={"video": True, "audio": False},  # Video only
+        mode=WebRtcMode.SENDRECV  # Set mode to both send and receive video
+    )
